@@ -1,7 +1,13 @@
-/**
+/*!
 JQUERY PLUGIN CSS-TRANSITIONS
-Use css transitions instead of the current jQuery animate.
-**/
+Copyright (c) 2012 Felipe Hefler
+
+Licensed under the MIT license.
+http://github.com/hefler/jquery-css-transitions/blob/master/LICENSE
+
+GitHub
+https://github.com/hefler/jquery-css-transitions
+*/
 (function($)
 {
 	$.fn.cssTransitions = function(cssProps, duration, callback)
@@ -44,7 +50,7 @@ Use css transitions instead of the current jQuery animate.
 					$target.off(event.type);
 					
 					/*
-					This check for the attribute previously added and clear the
+					This checks for the attribute previously added and clear the
 					CSS transition, when the last transition pass.
 					*/
 					
