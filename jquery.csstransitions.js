@@ -10,6 +10,59 @@ https://github.com/hefler/jquery-css-transitions
 */
 (function($)
 {
+	/**
+	Extends jQuery $.browser
+	**/
+	var bodyStyle = document.getElementsByTagName('body')[0].style;
+	var hasCSSTransitions = (bodyStyle.transition !== undefined) || (bodyStyle.webkitTransition !== undefined) || (bodyStyle.MozTransition !== undefined) || (bodyStyle.msTransition !== undefined) || (bodyStyle.OTransition !== undefined);
+	
+	var defineVendorPrefix = function()
+	{
+		var pfx = '';
+		if ($.browser.webkit) {
+			pfx = "webkit";
+		} else if ($.browser.msie) {
+			pfx = "ms";
+		} else if ($.browser.mozilla) {
+			pfx = "moz";
+		} else if ($.browser.opera) {
+			pfx = "o";
+		}
+		return pfx;
+	};
+	
+	var hasAnimationFrame = (window.requestAnimationFrame !== undefined) || (window.webkitRequestAnimationFrame !== undefined) || (window.mozRequestAnimationFrame !== undefined) || (window.oRequestAnimationFrame !== undefined);
+	
+	if(hasAnimationFrame && !window.requestAnimationFrame)
+	{
+		window.requestAnimationFrame = window[$.browser.vendorPrefix+'RequestAnimationFrame'];
+		window.cancelRequestAnimationFrame = window[$.browser.vendorPrefix+'CancelRequestAnimationFrame'];
+	}
+	
+	var setTransitionEndEvent = function()
+	{
+		var event = "transitionEnd";
+		if ($.browser.webkit) {
+			event = "webkitTransitionEnd";
+		} else if ($.browser.msie) {
+			event = (parseInt($.browser.version,10)>=10) ? "transitionend" : "msTransitionEnd";
+		} else if ($.browser.mozilla) {
+			event = "transitionend";
+		} else if ($.browser.opera) {
+			event = (parseInt($.browser.version,10)>=12) ? "otransitionend" : "oTransitionEnd";
+		}
+		return event;
+	};
+	
+	$.extend($.browser, {
+		vendorPrefix: defineVendorPrefix(),
+		hasAnimationFrame: hasAnimationFrame,
+		cssCapabilities: {
+							hasTransitions: hasCSSTransitions,
+							transitionEndEvent: setTransitionEndEvent()
+						}
+	});
+
 	$.fn.cssTransitions = function(cssProps, duration, callback)
 	{
 		return this.each(function()
