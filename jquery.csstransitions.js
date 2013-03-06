@@ -1,6 +1,6 @@
 /*!
 JQUERY PLUGIN CSS-TRANSITIONS
-Copyright (c) 2012 Felipe Hefler
+Copyright (c) 2013 Felipe Hefler
 
 Licensed under the MIT license.
 http://github.com/hefler/jquery-css-transitions/blob/master/LICENSE
@@ -11,59 +11,144 @@ https://github.com/hefler/jquery-css-transitions
 (function($)
 {
 	/**
-	Extends jQuery $.browser
+	Extends CSS props
 	**/
-	var bodyStyle = document.getElementsByTagName('body')[0].style;
-	var hasCSSTransitions = (bodyStyle.transition !== undefined) || (bodyStyle.webkitTransition !== undefined) || (bodyStyle.MozTransition !== undefined) || (bodyStyle.msTransition !== undefined) || (bodyStyle.OTransition !== undefined);
-	
-	var defineVendorPrefix = function()
+	if(!$.cssHooks)
 	{
-		var pfx = '';
-		if ($.browser.webkit) {
-			pfx = "webkit";
-		} else if ($.browser.msie) {
-			pfx = "ms";
-		} else if ($.browser.mozilla) {
-			pfx = "moz";
-		} else if ($.browser.opera) {
-			pfx = "o";
-		}
-		return pfx;
-	};
-	
-	var hasAnimationFrame = (window.requestAnimationFrame !== undefined) || (window.webkitRequestAnimationFrame !== undefined) || (window.mozRequestAnimationFrame !== undefined) || (window.oRequestAnimationFrame !== undefined);
-	
-	if(hasAnimationFrame && !window.requestAnimationFrame)
-	{
-		window.requestAnimationFrame = window[$.browser.vendorPrefix+'RequestAnimationFrame'];
-		window.cancelRequestAnimationFrame = window[$.browser.vendorPrefix+'CancelRequestAnimationFrame'];
+		throw ("jQuery 1.4.3 or higher required.");
 	}
-	
-	var setTransitionEndEvent = function()
+	//From jQuery documentation
+	var getStyleSupport = function(prop)
 	{
-		var event = "transitionEnd";
-		if ($.browser.webkit) {
+		var vendorProperty, supportedProperty,
+			capProp = prop.charAt(0).toUpperCase() + prop.slice(1),
+			prefixes = ["moz", "webkit", "o", "ms"],
+			body = document.body.style;
+
+		if(prop in body)
+		{
+			supportedProperty = prop;
+		}
+		else
+		{
+			var leng = prefixes.length;
+			for(var i=0; i < leng; i++)
+			{
+				vendorProperty = prefixes[i] + capProp;
+				if(vendorProperty in body)
+				{
+					supportedProperty = vendorProperty;
+					break;
+				}
+			}
+		}
+		$.support[prop] = supportedProperty;
+		return supportedProperty;
+	};
+
+	var createStyleHook = function(cssPropName, cssProp)
+	{
+		var obj = {
+			get: function(elem, computed, extra)
+			{
+				return $.css(elem, cssProp);
+			},
+			set: function(elem, value)
+			{
+				elem.style[cssProp] = value;
+			}
+		};
+		return obj.clone;
+	};
+
+	/*Looks up if the property exist inside cssHooks. If none is found, it make sure to add one.*/
+	var lookupAndAddToCSSHooks = function(props)
+	{
+		var leng = props.length;
+		for (var i=0; i < leng; i++)
+		{
+			var cssPropName = props[i];
+			var cssProp = getStyleSupport(cssPropName);
+
+			if (cssProp && cssProp !== cssPropName)
+			{
+				$.cssHooks[cssPropName] = createStyleHook(cssPropName, cssProp);
+			}
+		}
+	};
+
+	lookupAndAddToCSSHooks(['transition', 'transitionDuration', 'transitionDelay','transitionProperty','transitionTimingFunction','animationFrame', 'transitionend']);
+	//Tells that this is 'pure' numbers only (no 'px' appending).
+	$.cssNumber.transition = $.cssNumber.transitionDuration = $.cssNumber.transitionDelay = true;
+
+	var bodyStyle = document.getElementsByTagName('body')[0].style;
+
+	var hasTransition = (bodyStyle.transition !== undefined) || (bodyStyle.webkitTransition !== undefined) || (bodyStyle.MozTransition !== undefined) || (bodyStyle.msTransition !== undefined) || (bodyStyle.OTransition !== undefined);
+	var hasAnimationFrame = (window.requestAnimationFrame !== undefined) || (window.webkitRequestAnimationFrame !== undefined) || (window.mozRequestAnimationFrame !== undefined) || (window.oRequestAnimationFrame !== undefined);
+
+	var navAgent = window.navigator.userAgent;
+
+	var setTransitionEndEventName = function()
+	{
+		var event = "transitionend";
+		if (window.WebKitTransitionEvent) {
 			event = "webkitTransitionEnd";
-		} else if ($.browser.msie) {
-			event = (parseInt($.browser.version,10)>=10) ? "transitionend" : "msTransitionEnd";
-		} else if ($.browser.mozilla) {
-			event = "transitionend";
-		} else if ($.browser.opera) {
-			event = (parseInt($.browser.version,10)>=12) ? "otransitionend" : "oTransitionEnd";
+		} else if (window.MSTransitionEvent) {
+			event = "msTransitionEnd";
+		} else if (window.OTransitionEvent) {
+			event = "otransitionend";
 		}
 		return event;
 	};
-	
-	$.extend($.browser, {
-		vendorPrefix: defineVendorPrefix(),
-		hasAnimationFrame: hasAnimationFrame,
-		cssCapabilities: {
-							hasTransitions: hasCSSTransitions,
-							transitionEndEvent: setTransitionEndEvent()
-						}
+
+	$.extend($, {
+		navigator: {
+			iPad: (navAgent.match(/iPad/i) == "iPad"),
+			iPod: (navAgent.match(/iPod/i) == "iPod"),
+			iPhone: (navAgent.match(/iPhone/i) == "iPhone"),
+			android: (navAgent.match(/Android/i) == "Android"),
+			msieMob: (navAgent.match(/IEMobile/i) == "IEMobile"),
+			webkit: (navAgent.match(/WebKit/i) == "WebKit"),
+			msie: (navAgent.match(/MSIE/i) == "MSIE"),
+			mozilla: (navAgent.match(/Mozilla/i) == "Mozilla"),
+			opera: (navAgent.match(/Opera/i) == "Opera")
+		},
+		css3: {
+			transitionEndEvent: setTransitionEndEventName()
+		}
 	});
 
-	$.fn.cssTransitions = function(cssProps, duration, callback)
+	var getVendorPrefix = function()
+	{
+		var prefix = '';
+		if($.navigator.webkit)
+		{
+			prefix = 'webkit';
+		} else if ($.navigator.msie)
+		{
+			prefix = 'ms';
+		} else if ($.navigator.mozilla)
+		{
+			prefix = 'moz';
+		} else if ($.navigator.opera)
+		{
+			prefix = 'o';
+		}
+		return prefix;
+	};
+	if(hasAnimationFrame && !window.requestAnimationFrame)
+	{
+		var vendorPrefix = getVendorPrefix();
+		window.requestAnimationFrame = window[vendorPrefix+'RequestAnimationFrame'];
+		window.cancelRequestAnimationFrame = window[vendorPrefix+'CancelRequestAnimationFrame'];
+	}
+
+	$.extend($.support, {
+		animationFrame: hasAnimationFrame,
+		transition: hasTransition
+	});
+
+	$.fn.cssTransitions = function(cssProperties, duration, callback)
 	{
 		return this.each(function()
 		{
@@ -71,13 +156,13 @@ https://github.com/hefler/jquery-css-transitions
 			{
 				duration = 500;
 			}
-			
+
 			var $this = $(this),
 			data = $this.data('transitionsCount');
-			if($.browser.cssCapabilities.hasTransitions)
+			if($.support.transition)
 			{
 				/*
-				This adds saves to the data the number of transitions.
+				This adds to the data the number of transitions.
 				Later we can clear any transition left and preventing
 				the browser from triggering the transitionEnd event.
 				Thus calling only when the last transition is over.
@@ -88,32 +173,31 @@ https://github.com/hefler/jquery-css-transitions
 				} else {
 					data.count++;
 				}
-				
-				var transition = ($.browser.vendorPrefix.length>0 ? '-' : '')+$.browser.vendorPrefix+"-transition-duration";
-				cssProps[transition] = (duration/1000)+"s";
+				var transitionCSS = "transitionDuration";
+				cssProperties[transitionCSS] = (duration*0.001)+'s';
 				/*
-				This makes sure it animates. Because no "displayed" object receives css transitions
+				This makes sure it animates. Because not "displayed" object receives no css transitions
 				*/
-				$this.show().css(cssProps);
-				
-				$this.on($.browser.cssCapabilities.transitionEndEvent,function(event)
+				$this.show().css(cssProperties);
+
+				$this.on($.css3.transitionEndEvent, function(event)
 				{
 					var $target = $(event.target);
 					var targetData = $target.data('transitionsCount');
 					$target.off(event.type);
-					
+
 					/*
 					This checks for the attribute previously added and clear the
 					CSS transition, when the last transition pass.
 					*/
-					
+
 					if(targetData)
 					{
 						targetData.count--;
 						if(targetData.count <= 0)
 						{
 							targetData.count = 0;
-							$target.css(transition,'');
+							$target.css(transitionCSS,'');
 						}
 					}
 					if ($.isFunction(callback))
@@ -123,7 +207,7 @@ https://github.com/hefler/jquery-css-transitions
 				});
 			} else
 			{
-				$this.show().animate(cssProps, duration, callback ? callback : null);
+				$this.show().animate(cssProperties, duration, callback ? callback : null);
 			}
 		});
 	};
